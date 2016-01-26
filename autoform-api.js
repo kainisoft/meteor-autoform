@@ -307,25 +307,14 @@ AutoForm.getFormValues = function autoFormGetFormValues(formId, template, ss, ge
   };
 
   // Get a preliminary doc based on the form
-  var doc;
+  var doc = AutoForm.getFormDirtyValues(formId, template, ss);
 
-  if (template.view._domrange) {
-    // Build a flat document from field values
-    doc = getFlatDocOfFieldValues(getAllFieldsInForm(template), ss);
-
-    // Expand the flat document
-    doc = AutoForm.Utility.expandObj(doc);
-
-    // When all fields that comprise a sub-object are empty, we should unset
-    // the whole subobject and not complain about required fields in it. For example,
-    // if `profile.address` has several properties but they are all null or undefined,
-    // we will set `profile.address=null`. This ensures that we don't get incorrect validation
-    // errors about required fields that are children of optional objects.
-    AutoForm.Utility.bubbleEmpty(doc, keepEmptyStrings);
-  } else {
-    // If the form is not yet rendered, use the form.doc
-    doc = form.doc || {};
-  }
+  // When all fields that comprise a sub-object are empty, we should unset
+  // the whole subobject and not complain about required fields in it. For example,
+  // if `profile.address` has several properties but they are all null or undefined,
+  // we will set `profile.address=null`. This ensures that we don't get incorrect validation
+  // errors about required fields that are children of optional objects.
+  AutoForm.Utility.bubbleEmpty(doc, keepEmptyStrings);
 
   // Create and clean insert doc.
   if (getModifier !== true) {
@@ -397,6 +386,50 @@ AutoForm.getFormValues = function autoFormGetFormValues(formId, template, ss, ge
 };
 
 /**
+ * @method AutoForm.getFormDirtyValues
+ * @public
+ * @param {String} formId The `id` attribute of the `autoForm` you want current values for.
+ * @param {Template} [template] The template instance, if already known, as a performance optimization.
+ * @param {SimpleSchema} [ss] The SimpleSchema instance, if already known, as a performance optimization.
+ * @return {Object|null}
+ *
+ * Returns an object representing the currently entered values of all schema-based fields in the form.
+ * It means that returned object represents actually entered data in all form fields, without any transformations or cleaning.
+ * The returned object is either a normal object Return value may be `null` if the form is not currently rendered on screen.
+ */
+AutoForm.getFormDirtyValues = function autoFormGetFormDirtyValues(formId, template, ss) {
+  template = template || AutoForm.templateInstanceForForm(formId);
+  if (!template ||
+    !template.view ||
+      // We check for domrange later in this function
+    template.view.isDestroyed) {
+    return null;
+  }
+
+  // Get a reference to the SimpleSchema instance that should be used for
+  // determining what types we want back for each field.
+  ss = ss || AutoForm.getFormSchema(formId);
+
+  var form = AutoForm.getCurrentDataForForm(formId);
+
+  // Get a preliminary doc based on the form
+  var doc;
+
+  if (template.view._domrange) {
+    // Build a flat document from field values
+    doc = getFlatDocOfFieldValues(getAllFieldsInForm(template), ss);
+
+    // Expand the flat document
+    doc = AutoForm.Utility.expandObj(doc);
+  } else {
+    // If the form is not yet rendered, use the form.doc
+    doc = form.doc || {};
+  }
+
+  return doc;
+};
+
+/**
  * @method AutoForm.getFieldValue
  * @public
  * @param {String} fieldName The name of the field for which you want the current value.
@@ -419,18 +452,63 @@ AutoForm.getFieldValue = function autoFormGetFieldValue(fieldName, formId) {
     return;
   }
 
-  // reactive dependency
-  template.formValues = template.formValues || {};
-  if (!template.formValues[fieldName]) {
-    template.formValues[fieldName] = new Tracker.Dependency();
-  }
-  template.formValues[fieldName].depend();
+  AutoForm._addReactiveDepForFormValue(template, fieldName);
 
   var doc = AutoForm.getFormValues(formId, template, null, false);
   if (!doc) return;
 
   var mDoc = new MongoObject(doc);
   return mDoc.getValueForKey(fieldName);
+};
+
+/**
+ * @method AutoForm.getFieldDirtyValue
+ * @public
+ * @param {String} fieldName The name of the field for which you want the current value.
+ * @param {String} [formId] The `id` attribute of the `autoForm` you want current values for. Default is the closest form from the current context.
+ * @return {Any|undefined}
+ *
+ * Returns the value of the field (the value that is entered in the form field right now, without any cleaning done).
+ * This is a reactive method that will rerun whenever the current value of the requested field changes. Return value will be undefined if the field is not currently rendered.
+ */
+AutoForm.getFieldDirtyValue = function autoFormGetFieldDirtyValue(fieldName, formId) {
+  // find AutoForm template
+  var template = Tracker.nonreactive(function () {
+    return AutoForm.templateInstanceForForm(formId);
+  });
+
+  if (!template) {
+    if (formId) {
+      AutoForm.rerunWhenFormRenderedOrDestroyed(formId);
+    }
+    return;
+  }
+
+  AutoForm._addReactiveDepForFormValue(template, fieldName);
+
+  var doc = AutoForm.getFormDirtyValues(formId, template, null);
+  if (!doc) return;
+
+  var mDoc = new MongoObject(doc);
+  return mDoc.getValueForKey(fieldName);
+};
+
+/**
+ * @method AutoForm._addReactiveDepForFormValue
+ * @public
+ * @param {Template} [template] The template instance
+ * @param {String} [fieldName] The name of the field for which a reactive dependency should be added
+ * @return {undefined}
+ *
+ * Adds reactive dependency for one of the fields in a form template.
+ */
+AutoForm._addReactiveDepForFormValue = function autoFormAddReactiveDepForFormValue(template, fieldName) {
+  // reactive dependency
+  template.formValues = template.formValues || {};
+  if (!template.formValues[fieldName]) {
+    template.formValues[fieldName] = new Tracker.Dependency();
+  }
+  template.formValues[fieldName].depend();
 };
 
 /**
