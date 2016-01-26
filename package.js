@@ -1,7 +1,7 @@
 Package.describe({
-  name: "aldeed:autoform",
-  summary: "Easily create forms with automatic insert and update, and automatic reactive validation.",
-  git: "https://github.com/aldeed/meteor-autoform.git",
+  name: "sylvix:autoform",
+  summary: "THIS IS UNLISTED FORKED PACKAGE. You should probably install aldeed:autoform.",
+  git: "https://github.com/sylvix/meteor-autoform.git",
   version: "5.8.1"
 });
 
@@ -225,7 +225,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['aldeed:autoform', 'tinytest', 'underscore', 'mongo']);
+  api.use(['sylvix:autoform', 'tinytest', 'underscore', 'mongo']);
   api.use('momentjs:moment', 'client');
   api.addFiles(['tests/utility-tests.js', 'tests/autoform-tests.js']);
 });
