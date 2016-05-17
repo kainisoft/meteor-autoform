@@ -899,7 +899,7 @@ AutoForm.getInputType = function getInputType(atts) {
   // If options were provided, noselect is not `true`, and the schema
   // does not expect the value of the field to be an array, use "select".
   else if (atts.options && atts.noselect !== true && !expectsArray) {
-    type = 'select';
+    type = atts.searchable === false ? 'select' : 'select2';
   }
 
   // If the schema expects the value of the field to be a string and
