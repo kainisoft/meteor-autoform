@@ -492,6 +492,10 @@ Template.autoForm.events({
 
     // remove the item we clicked
     arrayTracker.removeFromFieldAtIndex(formId, name, index, ss, minCount, maxCount);
+
+    var _formId = $(event.target).closest('form').attr('id');
+
+    collectFormData(_formId);
   },
   'click .autoform-add-item': function autoFormClickAddItem(event, template) {
     event.preventDefault();
@@ -508,5 +512,20 @@ Template.autoForm.events({
     var ss = AutoForm.getFormSchema(formId);
 
     arrayTracker.addOneToField(formId, name, ss, minCount, maxCount);
+
+    var _formId = $(event.target).closest('form').attr('id');
+
+    collectFormData(_formId);
   }
 });
+
+function collectFormData( formId ) {
+  if (formId.startsWith('collectionField_')) {
+    return
+  }
+
+  var doc = AutoForm.getFormValues(formId, null, null, false);
+  var mDoc = new MongoObject(doc);
+  AutoForm.reactiveFormData.sourceDoc(formId, mDoc);
+}
+
