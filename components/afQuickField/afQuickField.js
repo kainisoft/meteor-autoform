@@ -13,6 +13,11 @@ Template.afQuickField.helpers({
     // and we have not overridden the type
     return (c.defs.type === Array && !c.atts.options && !c.atts.type);
   },
+  isSingleInputField: function () {
+    // for example - multiple files select, selects multiple files using single input field
+    var c = AutoForm.Utility.getComponentContext(this, "afQuickField");
+    return (c.defs.type === Array && !!c.defs.autoform && !!c.defs.autoform.afFieldInput);
+  },
   groupAtts: function afQuickFieldGroupAtts() {
     // afQuickField passes `fields` and `omitFields` on to `afObjectField`
     // and `afArrayField`, but not to `afFormGroup`

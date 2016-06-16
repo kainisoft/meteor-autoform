@@ -3,7 +3,11 @@
     {{> afObjectField}}
   {{else}}
     {{#if isFieldArray}}
-      {{> afArrayField}}
+      {{#if isSingleInputField}}
+        {{> afFieldInput groupAtts}}
+      {{else}}
+        {{> afArrayField}}
+      {{/if}}
     {{else}}
       {{#if isHiddenInput}}
         {{! if input type is defined as hidden, we don't render a form group}}
